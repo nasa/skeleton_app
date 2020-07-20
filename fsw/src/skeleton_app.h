@@ -88,7 +88,7 @@ typedef struct
     /*
     ** Initialization data (not reported in housekeeping)...
     */
-    char     PipeName[16];
+    char     PipeName[18];
     uint16   PipeDepth;
 } SKELETON_AppData_t;
 
