@@ -44,7 +44,7 @@
 */
 typedef struct
 {
-   uint8    CmdHeader[CFE_SB_CMD_HDR_SIZE];
+   CFE_MSG_CommandHeader_t CmdHeader; /**< \brief Command header */
 
 } SKELETON_NoArgsCmd_t;
 
@@ -73,10 +73,10 @@ typedef struct
 
 typedef struct
 {
-    uint8              TlmHeader[CFE_SB_TLM_HDR_SIZE];
+    CFE_MSG_TelemetryHeader_t  TlmHeader; /**< \brief Telemetry header */
     SKELETON_HkTlm_Payload_t  Payload;
 
-} OS_PACK SKELETON_HkTlm_t;
+} SKELETON_HkTlm_t;
 
 #endif /* _skeleton_app_msg_h_ */
 
