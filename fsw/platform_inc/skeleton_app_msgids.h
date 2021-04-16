@@ -30,9 +30,9 @@
 #ifndef _skeleton_app_msgids_h_
 #define _skeleton_app_msgids_h_
 
-#define SKELETON_APP_CMD_MID            0x1882
-#define SKELETON_APP_SEND_HK_MID        0x1883
-#define SKELETON_APP_HK_TLM_MID		0x0883
+#define SKELETON_APP_CMD_MID            0x1872
+#define SKELETON_APP_SEND_HK_MID        0x1873
+#define SKELETON_APP_HK_TLM_MID		    0x0873
 
 #endif /* _skeleton_app_msgids_h_ */
 
