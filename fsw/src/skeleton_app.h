@@ -49,16 +49,6 @@
 *************************************************************************/
 
 /*
- * Buffer to hold telemetry data prior to sending
- * Defined as a union to ensure proper alignment for a CFE_SB_Msg_t type
- */
-typedef union
-{
-    CFE_SB_Msg_t        MsgHdr;
-    SKELETON_HkTlm_t      HkTlm;
-} SKELETON_HkBuffer_t;
-
-/*
 ** Global Data
 */
 typedef struct
@@ -72,7 +62,7 @@ typedef struct
     /*
     ** Housekeeping telemetry packet...
     */
-    SKELETON_HkBuffer_t     HkBuf;
+    SKELETON_HkTlm_t     HkTlm;
 
     /*
     ** Run Status variable used in the main processing loop
@@ -83,13 +73,13 @@ typedef struct
     ** Operational data (not reported in housekeeping)...
     */
     CFE_SB_PipeId_t    CommandPipe;
-    CFE_SB_MsgPtr_t    MsgPtr;
 
     /*
     ** Initialization data (not reported in housekeeping)...
     */
     char     PipeName[16];
     uint16   PipeDepth;
+
 } SKELETON_AppData_t;
 
 /****************************************************************************/
@@ -101,13 +91,13 @@ typedef struct
 */
 void  SKELETON_AppMain(void);
 int32 SKELETON_AppInit(void);
-void  SKELETON_ProcessCommandPacket(CFE_SB_MsgPtr_t Msg);
-void  SKELETON_ProcessGroundCommand(CFE_SB_MsgPtr_t Msg);
-int32 SKELETON_ReportHousekeeping(const CCSDS_CommandPacket_t *Msg);
+void  SKELETON_ProcessCommandPacket(CFE_SB_Buffer_t *SBBufPtr);
+void  SKELETON_ProcessGroundCommand(CFE_SB_Buffer_t *SBBufPtr);
+int32 SKELETON_ReportHousekeeping(const CFE_MSG_CommandHeader_t *Msg);
 int32 SKELETON_ResetCounters(const SKELETON_ResetCounters_t *Msg);
 int32 SKELETON_Process(const SKELETON_Process_t *Msg);
 int32 SKELETON_Noop(const SKELETON_Noop_t *Msg);
 void  SKELETON_GetCrc(const char *TableName);
-bool  SKELETON_VerifyCmdLength(CFE_SB_MsgPtr_t Msg, uint16 ExpectedLength);
+bool  SKELETON_VerifyCmdLength(CFE_MSG_Message_t *MsgPtr, size_t ExpectedLength);
 
-#endif /* _skeleton_app_h_ */
+#endif 

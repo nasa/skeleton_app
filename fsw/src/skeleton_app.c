@@ -47,11 +47,7 @@ SKELETON_AppData_t SKELETON_AppData;
 void SKELETON_AppMain( void )
 {
     int32  status;
-
-    /*
-    ** Register the app with Executive services
-    */
-    CFE_ES_RegisterApp();
+    CFE_SB_Buffer_t *SBBufPtr;
 
     /*
     ** Perform application specific initialization
@@ -69,14 +65,14 @@ void SKELETON_AppMain( void )
     */
     while (CFE_ES_RunLoop(&SKELETON_AppData.RunStatus) == true)
     {
-        status = CFE_SB_RcvMsg(&SKELETON_AppData.MsgPtr,
+        status = CFE_SB_ReceiveBuffer(&SBBufPtr,
                                SKELETON_AppData.CommandPipe,
                                CFE_SB_PEND_FOREVER);
 
 
         if (status == CFE_SUCCESS)
         {
-            SKELETON_ProcessCommandPacket(SKELETON_AppData.MsgPtr);
+            SKELETON_ProcessCommandPacket(SBBufPtr);
         }
         else
         {
@@ -130,10 +126,9 @@ int32 SKELETON_AppInit( void )
     /*
     ** Initialize housekeeping packet (clear user data area).
     */
-    CFE_SB_InitMsg(&SKELETON_AppData.HkBuf.MsgHdr,
+    CFE_MSG_Init(&SKELETON_AppData.HkTlm.TlmHeader.Msg,
                    SKELETON_APP_HK_TLM_MID,
-                   sizeof(SKELETON_AppData.HkBuf),
-                   true);
+                   sizeof(SKELETON_AppData.HkTlm));
 
     /*
     ** Create Software Bus message pipe.
@@ -193,20 +188,20 @@ int32 SKELETON_AppInit( void )
 /*     command pipe.                                                          */
 /*                                                                            */
 /* * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * *  * *  * * * * */
-void SKELETON_ProcessCommandPacket( CFE_SB_MsgPtr_t Msg )
+void SKELETON_ProcessCommandPacket(CFE_SB_Buffer_t *SBBufPtr )
 {
-    CFE_SB_MsgId_t  MsgId;
+    CFE_SB_MsgId_t MsgId = CFE_SB_INVALID_MSG_ID;
 
-    MsgId = CFE_SB_GetMsgId(Msg);
+    CFE_MSG_GetMsgId(&SBBufPtr->Msg, &MsgId);
 
     switch (MsgId)
     {
         case SKELETON_APP_CMD_MID:
-            SKELETON_ProcessGroundCommand(Msg);
+            SKELETON_ProcessGroundCommand(SBBufPtr);
             break;
 
         case SKELETON_APP_SEND_HK_MID:
-            SKELETON_ReportHousekeeping((CCSDS_CommandPacket_t *)Msg);
+            SKELETON_ReportHousekeeping((CFE_MSG_CommandHeader_t *)SBBufPtr);
             break;
 
         default:
@@ -226,11 +221,11 @@ void SKELETON_ProcessCommandPacket( CFE_SB_MsgPtr_t Msg )
 /* SKELETON_ProcessGroundCommand() -- SKELETON ground commands                */
 /*                                                                            */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
-void SKELETON_ProcessGroundCommand( CFE_SB_MsgPtr_t Msg )
+void SKELETON_ProcessGroundCommand(CFE_SB_Buffer_t *SBBufPtr )
 {
-    uint16 CommandCode;
+    CFE_MSG_FcnCode_t CommandCode = 0;
 
-    CommandCode = CFE_SB_GetCmdCode(Msg);
+    CFE_MSG_GetFcnCode(&SBBufPtr->Msg, &CommandCode);
 
     /*
     ** Process "known" SKELETON app ground commands
@@ -238,25 +233,25 @@ void SKELETON_ProcessGroundCommand( CFE_SB_MsgPtr_t Msg )
     switch (CommandCode)
     {
         case SKELETON_APP_NOOP_CC:
-            if (SKELETON_VerifyCmdLength(Msg, sizeof(SKELETON_Noop_t)))
+            if (SKELETON_VerifyCmdLength(&SBBufPtr->Msg, sizeof(SKELETON_Noop_t)))
             {
-                SKELETON_Noop((SKELETON_Noop_t *)Msg);
+                SKELETON_Noop((SKELETON_Noop_t *)SBBufPtr);
             }
 
             break;
 
         case SKELETON_APP_RESET_COUNTERS_CC:
-            if (SKELETON_VerifyCmdLength(Msg, sizeof(SKELETON_ResetCounters_t)))
+            if (SKELETON_VerifyCmdLength(&SBBufPtr->Msg, sizeof(SKELETON_ResetCounters_t)))
             {
-                SKELETON_ResetCounters((SKELETON_ResetCounters_t *)Msg);
+                SKELETON_ResetCounters((SKELETON_ResetCounters_t *)SBBufPtr);
             }
 
             break;
 
         case SKELETON_APP_PROCESS_CC:
-            if (SKELETON_VerifyCmdLength(Msg, sizeof(SKELETON_Process_t)))
+            if (SKELETON_VerifyCmdLength(&SBBufPtr->Msg, sizeof(SKELETON_Process_t)))
             {
-                SKELETON_Process((SKELETON_Process_t *)Msg);
+                SKELETON_Process((SKELETON_Process_t *)SBBufPtr);
             }
 
             break;
@@ -283,19 +278,19 @@ void SKELETON_ProcessGroundCommand( CFE_SB_MsgPtr_t Msg )
 /*         telemetry, packetize it and send it to the housekeeping task via   */
 /*         the software bus                                                   */
 /* * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * *  * *  * * * * */
-int32 SKELETON_ReportHousekeeping( const CCSDS_CommandPacket_t *Msg )
+int32 SKELETON_ReportHousekeeping( const CFE_MSG_CommandHeader_t *Msg )
 {
     /*
     ** Get command execution counters...
     */
-    SKELETON_AppData.HkBuf.HkTlm.Payload.CommandErrorCounter = SKELETON_AppData.ErrCounter;
-    SKELETON_AppData.HkBuf.HkTlm.Payload.CommandCounter = SKELETON_AppData.CmdCounter;
+    SKELETON_AppData.HkTlm.Payload.CommandErrorCounter = SKELETON_AppData.ErrCounter;
+    SKELETON_AppData.HkTlm.Payload.CommandCounter = SKELETON_AppData.CmdCounter;
 
     /*
     ** Send housekeeping telemetry packet...
     */
-    CFE_SB_TimeStampMsg(&SKELETON_AppData.HkBuf.MsgHdr);
-    CFE_SB_SendMsg(&SKELETON_AppData.HkBuf.MsgHdr);
+    CFE_SB_TimeStampMsg(&SKELETON_AppData.HkTlm.TlmHeader.Msg);
+    CFE_SB_TransmitMsg(&SKELETON_AppData.HkTlm.TlmHeader.Msg, true);
 
     return CFE_SUCCESS;
 
@@ -363,27 +358,28 @@ int32  SKELETON_Process( const SKELETON_Process_t *Msg )
 /* SKELETON_VerifyCmdLength() -- Verify command packet length                 */
 /*                                                                            */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
-bool SKELETON_VerifyCmdLength( CFE_SB_MsgPtr_t Msg, uint16 ExpectedLength )
+bool SKELETON_VerifyCmdLength( CFE_MSG_Message_t *MsgPtr, size_t ExpectedLength )
 {
-    bool result = true;
+    bool              result       = true;
+    size_t            ActualLength = 0;
+    CFE_SB_MsgId_t    MsgId        = CFE_SB_INVALID_MSG_ID;
+    CFE_MSG_FcnCode_t FcnCode      = 0;
 
-    uint16 ActualLength = CFE_SB_GetTotalMsgLength(Msg);
+    CFE_MSG_GetSize(MsgPtr, &ActualLength);
 
     /*
     ** Verify the command packet length.
     */
     if (ExpectedLength != ActualLength)
     {
-        CFE_SB_MsgId_t MessageID   = CFE_SB_GetMsgId(Msg);
-        uint16         CommandCode = CFE_SB_GetCmdCode(Msg);
+        CFE_MSG_GetMsgId(MsgPtr, &MsgId);
+        CFE_MSG_GetFcnCode(MsgPtr, &FcnCode);
 
         CFE_EVS_SendEvent(SKELETON_LEN_ERR_EID,
                           CFE_EVS_EventType_ERROR,
-                          "Invalid Msg length: ID = 0x%X,  CC = %d, Len = %d, Expected = %d",
-                          MessageID,
-                          CommandCode,
-                          ActualLength,
-                          ExpectedLength);
+                          "Invalid Msg length: ID = 0x%X,  CC = %u, Len = %u, Expected = %u",
+                          (unsigned int)CFE_SB_MsgIdToValue(MsgId), (unsigned int)FcnCode, (unsigned int)ActualLength,
+                          (unsigned int)ExpectedLength);
 
         result = false;
 
