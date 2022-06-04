@@ -44,7 +44,7 @@
 */
 typedef struct
 {
-   uint8    CmdHeader[CFE_SB_CMD_HDR_SIZE];
+   CFE_MSG_CommandHeader_t CmdHeader;
 
 } SKELETON_NoArgsCmd_t;
 
@@ -69,16 +69,17 @@ typedef struct
     uint8              CommandErrorCounter;
     uint8              CommandCounter;
     uint8              spare[2];
+
 } SKELETON_HkTlm_Payload_t;
 
 typedef struct
 {
-    uint8              TlmHeader[CFE_SB_TLM_HDR_SIZE];
-    SKELETON_HkTlm_Payload_t  Payload;
+    CFE_MSG_TelemetryHeader_t  TlmHeader; /**< \brief Telemetry header */
+    SKELETON_HkTlm_Payload_t Payload;   /**< \brief Telemetry payload */
 
-} OS_PACK SKELETON_HkTlm_t;
+} SKELETON_HkTlm_t;
 
-#endif /* _skeleton_app_msg_h_ */
+#endif 
 
 /************************/
 /*  End of File Comment */
