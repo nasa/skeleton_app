@@ -63,6 +63,7 @@ void SKELETON_AppMain( void )
     /*
     ** SKELETON Runloop
     */
+    
     while (CFE_ES_RunLoop(&SKELETON_AppData.RunStatus) == true)
     {
         status = CFE_SB_ReceiveBuffer(&SBBufPtr,
@@ -110,8 +111,9 @@ int32 SKELETON_AppInit( void )
     ** Initialize app configuration data
     */
     SKELETON_AppData.PipeDepth = SKELETON_PIPE_DEPTH;
-
-    strcpy(SKELETON_AppData.PipeName, "SKELETON_CMD_PIPE");
+    
+    strncpy(SKELETON_AppData.PipeName, "SKELETON_CMD_PIPE", sizeof(SKELETON_AppData.PipeName));
+    SKELETON_AppData.PipeName[sizeof(SKELETON_AppData.PipeName) - 1] = 0;
 
     /*
     ** Register the events
@@ -127,7 +129,7 @@ int32 SKELETON_AppInit( void )
     ** Initialize housekeeping packet (clear user data area).
     */
     CFE_MSG_Init(&SKELETON_AppData.HkTlm.TlmHeader.Msg,
-                   SKELETON_APP_HK_TLM_MID,
+                   CFE_SB_ValueToMsgId(SKELETON_APP_HK_TLM_MID),
                    sizeof(SKELETON_AppData.HkTlm));
 
     /*
@@ -146,7 +148,7 @@ int32 SKELETON_AppInit( void )
     /*
     ** Subscribe to Housekeeping request commands
     */
-    status = CFE_SB_Subscribe(SKELETON_APP_SEND_HK_MID,
+    status = CFE_SB_Subscribe(CFE_SB_ValueToMsgId(SKELETON_APP_SEND_HK_MID),
                               SKELETON_AppData.CommandPipe);
     if (status != CFE_SUCCESS)
     {
@@ -158,7 +160,7 @@ int32 SKELETON_AppInit( void )
     /*
     ** Subscribe to ground command packets
     */
-    status = CFE_SB_Subscribe(SKELETON_APP_CMD_MID,
+    status = CFE_SB_Subscribe(CFE_SB_ValueToMsgId(SKELETON_APP_CMD_MID),
                               SKELETON_AppData.CommandPipe);
     if (status != CFE_SUCCESS )
     {
@@ -194,7 +196,7 @@ void SKELETON_ProcessCommandPacket(CFE_SB_Buffer_t *SBBufPtr )
 
     CFE_MSG_GetMsgId(&SBBufPtr->Msg, &MsgId);
 
-    switch (MsgId)
+    switch (CFE_SB_MsgIdToValue(MsgId))
     {
         case SKELETON_APP_CMD_MID:
             SKELETON_ProcessGroundCommand(SBBufPtr);
@@ -208,7 +210,7 @@ void SKELETON_ProcessCommandPacket(CFE_SB_Buffer_t *SBBufPtr )
             CFE_EVS_SendEvent(SKELETON_INVALID_MSGID_ERR_EID,
                               CFE_EVS_EventType_ERROR,
          	              "SKELETON: invalid command packet,MID = 0x%x",
-                              MsgId);
+                              CFE_SB_MsgIdToValue(MsgId));
             break;
     }
 
